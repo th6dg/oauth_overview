@@ -4,7 +4,7 @@ import com.wiredpackage.oauth.domain.aggregate_models.code_verify_aggregate.Code
 import com.wiredpackage.oauth.domain.repositories.ICodeVerifyRepository;
 import com.wiredpackage.oauth.shared.constants.CodeVerifyStatus;
 import com.wiredpackage.oauth.shared.constants.CodeVerifyType;
-import com.wiredpackage.shared.application.exceptions.TaopassInnerServerErrorException;
+import com.wiredpackage.shared.application.exceptions.InnerServerErrorException;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
 import com.wiredpackage.shared.shared.utils.TimeUtils;
 import jakarta.xml.bind.DatatypeConverter;
@@ -43,7 +43,7 @@ public class CodeVerifyService {
         }
         if (StringUtils.isBlank(code) || code.trim().length() != CODE_VERIFY_LENGTH) {
             log.error("Cannot generate code verify for identityId :{} ", identityId);
-            throw new TaopassInnerServerErrorException("code_verify_cannot_generate");
+            throw new InnerServerErrorException("code_verify_cannot_generate");
         }
         CodeVerify codeVerify = CodeVerify.builder()
             .identityId(identityId)

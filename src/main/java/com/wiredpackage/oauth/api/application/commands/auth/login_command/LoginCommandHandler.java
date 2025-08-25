@@ -8,7 +8,7 @@ import com.wiredpackage.oauth.domain.aggregate_models.oauth2_refresh_token_aggre
 import com.wiredpackage.oauth.domain.repositories.IOAuth2AuthenticationRepository;
 import com.wiredpackage.oauth.domain.repositories.IOAuth2RefreshTokenRepository;
 import com.wiredpackage.oauth.infrastructure.services.TokenService;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,12 +32,12 @@ public class LoginCommandHandler implements Command.Handler<LoginCommand, LoginR
     public LoginResDto handle(LoginCommand command) {
         if (command.getOauth2AuthenticationId() != null) {
             oAuth2AuthenticationRepository.findById(command.getOauth2AuthenticationId())
-                .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
+                .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
         }
 
         List<String> roles = authQueries.getRoles(command.getIdentityLogin().getId());
         if (roles.isEmpty()) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
+            throw new UnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
         }
         Long authorityId = authService.getAuthorityId(command.getIdentityLogin().getId());
 

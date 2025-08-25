@@ -17,10 +17,10 @@ import com.wiredpackage.oauth.domain.repositories.IOAuth2GrantRepository;
 import com.wiredpackage.oauth.domain.repositories.IOAuth2WaitingApprovalRepository;
 import com.wiredpackage.oauth.infrastructure.entities.OAuth2AuthenticationEntity;
 import com.wiredpackage.oauth.infrastructure.jpa_repositories.OAuth2AuthenticationJpaRepository;
-import com.wiredpackage.shared.application.exceptions.TaopassBadRequestException;
-import com.wiredpackage.shared.application.exceptions.TaopassForbiddenException;
-import com.wiredpackage.shared.application.exceptions.TaopassNotFoundException;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.BadRequestException;
+import com.wiredpackage.shared.application.exceptions.ForbiddenException;
+import com.wiredpackage.shared.application.exceptions.NotFoundException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.shared.constants.Oauth2GrantType;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
 import lombok.RequiredArgsConstructor;
@@ -51,20 +51,20 @@ public class PerformApprovalCommandHandler implements Command.Handler<PerformApp
         OAuth2WaitingApproval oAuth2WaitingApproval =
             oAuth2WaitingApprovalRepository.findByItemId(command.getWaitingApprovalItemId()).orElse(null);
         if (oAuth2WaitingApproval == null) {
-            throw new TaopassNotFoundException("waiting_approval_not_found");
+            throw new NotFoundException("waiting_approval_not_found");
         }
 
         if (oAuth2WaitingApproval.getApproved() || !oAuth2WaitingApproval.getValid() ||
             authService.isApprovalExpired(oAuth2WaitingApproval.getCreatedAt())) {
-            throw new TaopassBadRequestException(Map.of("approval", MessageHelper.getMessage("invalid_approval")));
+            throw new BadRequestException(Map.of("approval", MessageHelper.getMessage("invalid_approval")));
         }
 
         OAuth2Grant oAuth2Grant = oAuth2GrantRepository.findById(oAuth2WaitingApproval.getOauth2GrantId()).orElseThrow(
-            () -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+            () -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         ServiceSummary service = serviceQueriesService.findSummaryServiceById(oAuth2Grant.getServiceId()).orElseThrow(
-            () -> new TaopassNotFoundException(MessageHelper.getMessage("service_not_found")));
+            () -> new NotFoundException(MessageHelper.getMessage("service_not_found")));
         if (!authService.checkPermissionApproval(service.getType(), oAuth2Grant.getLocationId(), command.getAuthorityId())) {
-            throw new TaopassForbiddenException();
+            throw new ForbiddenException();
         }
         if (Boolean.TRUE.equals(command.getIsApproved())) {
             approve(oAuth2WaitingApproval, oAuth2Grant);

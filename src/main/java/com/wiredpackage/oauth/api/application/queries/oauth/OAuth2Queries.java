@@ -18,8 +18,8 @@ import com.wiredpackage.oauth.domain.aggregate_models.oauth2_code_aggregate.OAut
 import com.wiredpackage.oauth.domain.repositories.IOAuth2AuthenticationRepository;
 import com.wiredpackage.oauth.domain.repositories.IOAuth2CodeRepository;
 import com.wiredpackage.oauth.shared.constants.CodeVerifyType;
-import com.wiredpackage.shared.application.exceptions.TaopassNotFoundException;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.NotFoundException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.dto.WaitingApprovalResDto;
 import com.wiredpackage.shared.infrastructure.services.OAuthAppService;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
@@ -75,7 +75,7 @@ public class OAuth2Queries {
         return switch (Objects.requireNonNull(OAuthTwoFAType.fromString(authScoring.getTwoStepVerificationType()))) {
             case SMS, EMAIL -> codeVerifyService.verifyCode(request.getVerifyCode(), CodeVerifyType.AUTHENTICATION, identity.getId(), request.getCodeChallenge());
             case PIN -> verifyPin(identity.getPinCode(), request.getVerifyCode());
-            default -> throw new TaopassUnauthorizationException(MessageHelper.getMessage("oauth_two_fa_type_invalid"));
+            default -> throw new UnauthorizationException(MessageHelper.getMessage("oauth_two_fa_type_invalid"));
         };
     }
 
@@ -96,7 +96,7 @@ public class OAuth2Queries {
 
     public OAuthLogSummary getOAuthLogWithCodeChallenge(String codeChallenge) {
         return oAuth2QueriesService.getOAuthLogWithCodeChallenge(codeChallenge).orElseThrow(() ->
-            new TaopassNotFoundException(String.format("OauthLog not found with code challenge %s", codeChallenge))
+            new NotFoundException(String.format("OauthLog not found with code challenge %s", codeChallenge))
         );
     }
 
@@ -127,7 +127,7 @@ public class OAuth2Queries {
         Long identityId = identityQueriesService.findFaceInfoByFaceId(faceId)
             .orElseThrow(() -> {
                 log.error("Identity not found with faceId " + faceId);
-                return new TaopassNotFoundException("Identity not found with faceId " + faceId);
+                return new NotFoundException("Identity not found with faceId " + faceId);
             }).getIdentityId();
         return oAuth2AuthenticationRepository.findByIdentityAndAuthSetting(identityId, authSettingId);
     }
@@ -137,7 +137,7 @@ public class OAuth2Queries {
             return new ArrayList<>();
         }
         IdentityLogin identityLogin = identityQueriesService.findIdentityByIdentityId(identityId)
-            .orElseThrow(() -> new TaopassNotFoundException(MessageHelper.getMessage("identity_not_found")));
+            .orElseThrow(() -> new NotFoundException(MessageHelper.getMessage("identity_not_found")));
         if (Boolean.TRUE.equals(identityLogin.getIsRegistering())) {
             return new ArrayList<>();
         }

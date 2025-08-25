@@ -81,7 +81,7 @@ public class AuthenticationConfigResDto {
         thirdPartyCheck = authScoringSettings.isThirdPartyCheck();
     }
 
-    public void setAuthScoringSettingsForTaopassAuth(AuthScoringSettingDto authScoringSettings) {
+    public void setAuthScoringSettingsForAuth(AuthScoringSettingDto authScoringSettings) {
         if(authScoringSettings == null) return;
         setAuthScoring(authScoringSettings);
         retentionTime = authScoringSettings.getRetentionTime();

@@ -35,8 +35,8 @@ import com.wiredpackage.oauth.shared.helpers.BrightnessHelper;
 import com.wiredpackage.shared.application.dto.ApiResponse;
 import com.wiredpackage.shared.application.dto.UserDetail;
 import com.wiredpackage.shared.application.dto.oauth_service.LogRecognizeResDto;
-import com.wiredpackage.shared.application.exceptions.TaopassInnerServerErrorException;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.InnerServerErrorException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.application.security.SecurityService;
 import com.wiredpackage.shared.dto.WaitingApprovalResDto;
 import com.wiredpackage.shared.infrastructure.services.OAuthAppService;
@@ -112,7 +112,7 @@ public class OAuthController {
                                  @RequestPart("meta") OAuthLogMetaReqDto meta) {
         OAuth2GrantSummary oAuth2Grant =
             oAuth2Queries.findOAuth2GrantSummaryByCodeChallenge(codeChallenge).orElseThrow(
-                () -> new TaopassUnauthorizationException(
+                () -> new UnauthorizationException(
                     MessageHelper.getMessage("invalid_code_challenge_or_expired")));
         String logImageObjectKey = "";
         AuthScoringSettingDto authScoringSettingDto = authenticationQueries.getAuthScoringByOAuth2Grant(oAuth2Grant);
@@ -122,7 +122,7 @@ public class OAuthController {
             }
         } catch (Exception e) {
             log.error("Failed to upload log image", e);
-            throw new TaopassInnerServerErrorException();
+            throw new InnerServerErrorException();
         }
         Double brightness = brightnessHelper.getBrightness(file, faceBox);
         UploadRecognizeFaceLogCommand command = UploadRecognizeFaceLogCommand.builder()
@@ -178,7 +178,7 @@ public class OAuthController {
     public VerifyFaceResDto verifyFace(@RequestBody VerifyFaceReqDto request) {
 
         OAuth2Grant oAuth2Grant = oAuth2GrantRepository.findByCodeChallenge(request.getCodeChallenge())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
 
         if (oAuth2Grant.getOauthGrantType().equals(Oauth2GrantType.STREAM.name())) {
             return VerifyFaceResDto.builder()
@@ -197,7 +197,7 @@ public class OAuthController {
             Optional<IdentitySummary> identityOptional = identityQueries.findIdentitySummaryByFaceId(request.getFaceId());
             if (identityOptional.isEmpty()) {
                 log.error("----- Identity not found with faceId {}", request.getFaceId());
-                throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+                throw new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
             }
             authenticationSettingId = DefaultAccountAuthSettings.DEFAULT_AUTHENTICATION_SETTING_ID;
             if (oAuth2Grant.getOauthGrantType().equals(Oauth2GrantType.STREAM_RECOGNIZANCE.name())
@@ -219,19 +219,19 @@ public class OAuthController {
         }
         AuthenticationSettingSummary authenticationSetting =
             oAuth2Queries.findAuthenticationSettingSummaryByClientId(oAuth2Grant.getClientId()).orElseThrow(
-                () -> new TaopassUnauthorizationException(MessageHelper.getMessage("authentication_setting_not_found")));
+                () -> new UnauthorizationException(MessageHelper.getMessage("authentication_setting_not_found")));
         Optional<IdentitySummary> identityOptional = identityQueries.findIdentityByFaceIdAndCompanyId(request.getFaceId(),
             authenticationSetting.getCompanyId());
         if (identityOptional.isEmpty()) {
             log.error("----- Identity not found with faceId {}, company {} from camera {}", request.getFaceId(),
                 authenticationSetting.getCompanyId(), authenticationSetting.getCameraName());
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+            throw new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
         }
         identity = identityOptional.get();
         log.info("----- Identity found with faceId {}, company {} from camera {}", request.getFaceId(),
             authenticationSetting.getCompanyId(), authenticationSetting.getCameraName());
         if (!authenticationSetting.getCompanyId().equals(identity.getCompanyId())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_is_not_valid"));
+            throw new UnauthorizationException(MessageHelper.getMessage("identity_is_not_valid"));
         }
 
         VerifyFaceCommand command = VerifyFaceCommand.builder()
@@ -251,7 +251,7 @@ public class OAuthController {
         Optional<IdentitySummary> identityOptional = identityQueries.findIdentitySummaryByFaceId(request.getFaceId());
         if (identityOptional.isEmpty()) {
             log.error("----- Identity not found with faceId {}", request.getFaceId());
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+            throw new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
         }
         IdentitySummary identity = identityOptional.get();
         Long authenticationSettingId = getAuthenticationSettingStreamFromLocationAndService(request.getService(), request.getLocationId());
@@ -269,18 +269,18 @@ public class OAuthController {
 
     private Long getAuthenticationSettingStreamFromLocationAndService(String serviceType, Long locationId) {
         return authenticationQueries.findAuthenticationSettingByServiceTypeAndLocationIdAndCameraType(serviceType, locationId)
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("authentication_setting_not_found")))
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("authentication_setting_not_found")))
             .getId();
     }
 
     @PostMapping("token")
     public LoginResDto getToken(@RequestBody OAuthGetTokenReqDto request) throws NoSuchAlgorithmException {
         OAuthAuthenticationSummary oAuthAuthentication = oAuth2Queries.findOAuthAuthenticationSummaryByCode(request.getCode())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
         OAuthGrantSummary oAuthGrant = oAuth2Queries.findOAuthGrantSummaryById(oAuthAuthentication.getOAuth2GrantId())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         if (!pkceService.verifyCodeVerifier(oAuthGrant.getCodeChallenge(), request.getCodeVerifier())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
+            throw new UnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
         }
         IdentityLogin identityLogin;
         if (Boolean.TRUE.equals(request.getManagerLoginFace())) {
@@ -288,11 +288,11 @@ public class OAuthController {
             CompanyDetails company = companyQueries.findCompanyDetailsByIdentityId(oAuthAuthentication.getIdentityId());
             // find identity id manager
             identityLogin = identityQueries.findIdentityManagerByIdentityUser(oAuthAuthentication.getIdentityId(), company.getId())
-                .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found")));
+                .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("identity_not_found")));
 
         } else {
             identityLogin = identityQueries.findIdentityByIdentityId(oAuthAuthentication.getIdentityId())
-                .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found")));
+                .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("identity_not_found")));
         }
         //get gps from oauth2Log
         String gps;
@@ -313,11 +313,11 @@ public class OAuthController {
     @PostMapping("token-stream")
     public LoginResDto getTokenWithoutExpiring(@RequestBody OAuthGetTokenReqDto request) throws NoSuchAlgorithmException {
         OAuthAuthenticationSummary oAuthAuthentication = oAuth2Queries.findOAuthAuthenticationSummaryByCode(request.getCode())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
         OAuthGrantSummary oAuthGrant = oAuth2Queries.findOAuthGrantSummaryById(oAuthAuthentication.getOAuth2GrantId())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         if (!pkceService.verifyCodeVerifier(oAuthGrant.getCodeChallenge(), request.getCodeVerifier())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
+            throw new UnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
         }
         IdentityLogin identityLogin;
         if (Boolean.TRUE.equals(request.getManagerLoginFace())) {
@@ -325,11 +325,11 @@ public class OAuthController {
             CompanyDetails company = companyQueries.findCompanyDetailsByIdentityId(oAuthAuthentication.getIdentityId());
             // find identity id manager
             identityLogin = identityQueries.findIdentityManagerByIdentityUser(oAuthAuthentication.getIdentityId(), company.getId())
-                .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found")));
+                .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("identity_not_found")));
 
         } else {
             identityLogin = identityQueries.findIdentityByIdentityId(oAuthAuthentication.getIdentityId())
-                .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found")));
+                .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("identity_not_found")));
         }
         //get gps from oauth2Log
         String gps;
@@ -405,7 +405,7 @@ public class OAuthController {
                                                  @RequestPart("metas") List<OAuthLogMetaReqDto> metas) {
         OAuth2GrantSummary oAuth2Grant =
             oAuth2Queries.findOAuth2GrantSummaryByCodeChallenge(codeChallenge).orElseThrow(
-                () -> new TaopassUnauthorizationException(
+                () -> new UnauthorizationException(
                     MessageHelper.getMessage("invalid_code_challenge_or_expired")));
         String logImageObjectKey = "";
         AuthScoringSettingDto authScoringSettingDto = authenticationQueries.getAuthScoringByOAuth2Grant(oAuth2Grant);
@@ -415,7 +415,7 @@ public class OAuthController {
             }
         } catch (Exception e) {
             log.error("Failed to upload log image", e);
-            throw new TaopassInnerServerErrorException();
+            throw new InnerServerErrorException();
         }
         UploadMultiRecognizeFaceLogCommand command = UploadMultiRecognizeFaceLogCommand.builder()
             .oAuthGrant(oAuth2Grant)
@@ -439,14 +439,14 @@ public class OAuthController {
     @PostMapping("verify-oauth-authentication")
     public LoginResDto verifyOauthAuthentication(@RequestBody OAuthGetTokenReqDto request) {
         OAuthAuthenticationSummary oAuthAuthentication = oAuth2Queries.findOAuthAuthenticationSummaryByCode(request.getCode())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
         OAuthGrantSummary oAuthGrant = oAuth2Queries.findOAuthGrantSummaryById(oAuthAuthentication.getOAuth2GrantId())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         if (!oAuthGrant.getCodeChallenge().equals(request.getCodeVerifier())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
+            throw new UnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
         }
         IdentityLogin identityLogin = identityQueries.findIdentityByIdentityId(oAuthAuthentication.getIdentityId())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("identity_not_found")));
 
         LoginCommand command = LoginCommand.builder()
             .identityLogin(identityLogin)
@@ -458,11 +458,11 @@ public class OAuthController {
     @PostMapping("log-resolved")
     public void logResolvedAuthentication(@RequestBody LogResolvedAuthenticationDto request) throws NoSuchAlgorithmException {
         OAuthAuthenticationSummary oAuthAuthentication = oAuth2Queries.findOAuthAuthenticationSummaryByCode(request.getCode())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_authentication_not_found")));
         OAuthGrantSummary oAuthGrant = oAuth2Queries.findOAuthGrantSummaryById(oAuthAuthentication.getOAuth2GrantId())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         if (!pkceService.verifyCodeVerifier(oAuthGrant.getCodeChallenge(), request.getCodeVerifier())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
+            throw new UnauthorizationException(MessageHelper.getMessage("code_verifier_invalid"));
         }
         oAuthLogService.logResolvedAuthentication(oAuthGrant.getCodeChallenge(), request.getResolveTime(), request.getOthersTime(),
             request.getResolveAt());

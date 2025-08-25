@@ -9,7 +9,7 @@ import com.wiredpackage.oauth.api.dto.auth.LoginResDto;
 import com.wiredpackage.oauth.domain.aggregate_models.oauth2_refresh_token_aggregate.OAuth2RefreshToken;
 import com.wiredpackage.oauth.domain.repositories.IOAuth2RefreshTokenRepository;
 import com.wiredpackage.oauth.infrastructure.services.TokenService;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
 import com.wiredpackage.shared.shared.utils.TimeUtils;
 import lombok.AllArgsConstructor;
@@ -34,18 +34,18 @@ public class RefreshTokenCommandHandler implements
     @Transactional(rollbackFor = Exception.class)
     public LoginResDto handle(RefreshTokenCommand command) {
         OAuth2RefreshToken oAuth2RefreshToken = oAuth2RefreshTokenRepository.findByRefreshToken(command.getRefreshToken())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_refresh_token_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("oauth2_refresh_token_not_found")));
 
         if (oAuth2RefreshToken.getExpiresAt().isBefore(TimeUtils.now())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_refresh_token_expires"));
+            throw new UnauthorizationException(MessageHelper.getMessage("oauth2_refresh_token_expires"));
         }
         IdentityLogin identityLogin = identityQueriesService.findIdentityByIdentityId(oAuth2RefreshToken.getIdentityId())
-            .orElseThrow(() -> new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found")));
+            .orElseThrow(() -> new UnauthorizationException(MessageHelper.getMessage("identity_not_found")));
 
 
         List<String> roles = authQueries.getRoles(identityLogin.getId());
         if (roles.isEmpty()) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
+            throw new UnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
         }
 
         Long authorityId = authService.getAuthorityId(identityLogin.getId());

@@ -12,7 +12,7 @@ import com.wiredpackage.oauth.api.dto.auth.LoginReqDto;
 import com.wiredpackage.oauth.api.dto.auth.LoginResDto;
 import com.wiredpackage.oauth.api.dto.auth.RefreshReqDto;
 import com.wiredpackage.shared.application.dto.oauth_service.GenerateExternalTokenDto;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.shared.constants.RoleEnum;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,19 +46,19 @@ public class AuthController {
             identityQueries.findIdentityByCompanyIdAndLoginId(request.getAccountId(), request.getLoginId())
                 .orElseThrow(() -> {
                         log.error("Identity not found {} {}", request.getAccountId(), request.getLoginId());
-                        return new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+                        return new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
                     }
                 );
         if (!authService.comparePassword(identityLogin.getPassword(), request.getPassword())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+            throw new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
         }
         List<String> roles = authQueries.getRoles(identityLogin.getId());
         if (roles.isEmpty()) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
+            throw new UnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
         }
         if (request.getAccountId() != null && (RoleEnum.isAdmin(roles) || RoleEnum.isCompany(roles)) ||
             request.getAccountId() == null && !RoleEnum.isAdmin(roles) && !RoleEnum.isCompany(roles) && !RoleEnum.isManager(roles)) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+            throw new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
         }
         LoginCommand command = LoginCommand.builder()
             .identityLogin(identityLogin)
@@ -88,19 +88,19 @@ public class AuthController {
             identityQueries.findIdentityByCompanyIdAndLoginId(request.getAccountId(), request.getLoginId())
                 .orElseThrow(() -> {
                         log.error("Identity not found {} {}", request.getAccountId(), request.getLoginId());
-                        return new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+                        return new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
                     }
                 );
         if (!authService.comparePassword(identityLogin.getPassword(), request.getPassword())) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+            throw new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
         }
         List<String> roles = authQueries.getRoles(identityLogin.getId());
         if (roles.isEmpty()) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
+            throw new UnauthorizationException(MessageHelper.getMessage("user_login_not_roles"));
         }
         if (request.getAccountId() != null && RoleEnum.isAdmin(roles) ||
             request.getAccountId() == null && !RoleEnum.isAdmin(roles) && !RoleEnum.isCompany(roles) && !RoleEnum.isManager(roles)) {
-            throw new TaopassUnauthorizationException(MessageHelper.getMessage("identity_not_found"));
+            throw new UnauthorizationException(MessageHelper.getMessage("identity_not_found"));
         }
         LoginCommand command = LoginCommand.builder()
             .identityLogin(identityLogin)

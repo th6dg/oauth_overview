@@ -15,7 +15,7 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI accountsApi() {
         return new OpenAPI()
-            .info(new Info().title("Taopass OAuth2 API"))
+            .info(new Info().title("OAuth2 API"))
             .components(
                 new Components().addSecuritySchemes(securitySchemeKey,
                     new SecurityScheme()

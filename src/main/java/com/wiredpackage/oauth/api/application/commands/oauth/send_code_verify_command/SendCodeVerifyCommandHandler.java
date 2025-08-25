@@ -14,9 +14,9 @@ import com.wiredpackage.oauth.api.application.services.CodeVerifyService;
 import com.wiredpackage.oauth.api.application.services.CompanyService;
 import com.wiredpackage.oauth.shared.constants.CodeVerifyType;
 import com.wiredpackage.oauth.shared.constants.SmsHostType;
-import com.wiredpackage.shared.application.exceptions.TaopassBadRequestException;
-import com.wiredpackage.shared.application.exceptions.TaopassNotFoundException;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.BadRequestException;
+import com.wiredpackage.shared.application.exceptions.NotFoundException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +47,7 @@ public class SendCodeVerifyCommandHandler implements Command.Handler<SendCodeVer
     public Long handle(SendCodeVerifyCommand command) {
         // find identity with faceId
         FaceInfoSummary faceInfo = identityQueries.findFaceInfoByFaceId(command.getFaceId())
-            .orElseThrow(() -> new TaopassNotFoundException(MessageHelper.getMessage("face_id_not_found")));
+            .orElseThrow(() -> new NotFoundException(MessageHelper.getMessage("face_id_not_found")));
         // gen verify code
         String codeVerify = codeVerifyService.registerCodeVerify(CodeVerifyType.AUTHENTICATION, faceInfo.getIdentityId(),
             command.getCodeChallenge(), command.getTypeVerify());
@@ -55,7 +55,7 @@ public class SendCodeVerifyCommandHandler implements Command.Handler<SendCodeVer
         if (command.getTypeVerify().equals(OAuthTwoFAType.EMAIL.name())) {
             if (StringUtils.isBlank(faceInfo.getEmail())) {
                 log.info("----- Verify code email failed with face id {}", command.getFaceId());
-                throw new TaopassUnauthorizationException(MessageHelper.getMessage("email_not_found"));
+                throw new UnauthorizationException(MessageHelper.getMessage("email_not_found"));
             }
             // Send mail verify token
             SendVerifyEmailEvent event = SendVerifyEmailEvent.builder()
@@ -67,7 +67,7 @@ public class SendCodeVerifyCommandHandler implements Command.Handler<SendCodeVer
         } else if (command.getTypeVerify().equals(OAuthTwoFAType.SMS.name())) {
             if (StringUtils.isBlank(faceInfo.getPhoneNumber())) {
                 log.info("----- Verify code SMS failed with face id {}", command.getFaceId());
-                throw new TaopassBadRequestException(
+                throw new BadRequestException(
                     Map.of("error", MessageHelper.getMessage("phone_number_not_found")));
             }
             // Send sms

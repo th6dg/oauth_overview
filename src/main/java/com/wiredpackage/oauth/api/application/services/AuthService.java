@@ -13,9 +13,9 @@ import com.wiredpackage.oauth.api.application.queries.schedule.ScheduleQueries;
 import com.wiredpackage.oauth.api.application.queries.service.IServiceQueriesService;
 import com.wiredpackage.oauth.api.dto.oauth.NeedSendApprovalNotify;
 import com.wiredpackage.shared.application.dto.authentication_obj.AuthenticationObjDetails;
-import com.wiredpackage.shared.application.exceptions.TaopassBadRequestException;
-import com.wiredpackage.shared.application.exceptions.TaopassForbiddenException;
-import com.wiredpackage.shared.application.exceptions.TaopassNotFoundException;
+import com.wiredpackage.shared.application.exceptions.BadRequestException;
+import com.wiredpackage.shared.application.exceptions.ForbiddenException;
+import com.wiredpackage.shared.application.exceptions.NotFoundException;
 import com.wiredpackage.shared.shared.helpers.MessageHelper;
 import com.wiredpackage.shared.shared.utils.TimeUtils;
 import lombok.RequiredArgsConstructor;
@@ -49,31 +49,31 @@ public class AuthService {
 
     public void checkCertificationLimit(String serviceType, Long locationId, String cameraType) {
         ServiceSummary service = serviceQueriesService.findSummaryServiceByType(serviceType).orElseThrow(
-            () -> new TaopassNotFoundException(MessageHelper.getMessage("service_not_found")));
+            () -> new NotFoundException(MessageHelper.getMessage("service_not_found")));
         PlanSummary plan = planQueriesService.findPlanSummaryByServiceIdAndLocationIdAndCameraType(
             service.getId(), locationId, cameraType, TimeUtils.currentDate()).orElseThrow(
-            () -> new TaopassNotFoundException(MessageHelper.getMessage("plan_not_found")));
+            () -> new NotFoundException(MessageHelper.getMessage("plan_not_found")));
         LocalDateTime dateNow = TimeUtils.now();
         LocalDateTime startDate = dateNow.withDayOfMonth(1);
         Long authenticationCount = oAuth2QueriesService.countOAuth2AuthenticationsByAuthenticationSettingIdAndTimeRange(
             plan.getAuthenticationCameraId(), startDate, dateNow);
         if (authenticationCount >= plan.getCertificationLimit()) {
-            throw new TaopassBadRequestException(Map.of("plan", MessageHelper.getMessage("certification_limit_exceeded")));
+            throw new BadRequestException(Map.of("plan", MessageHelper.getMessage("certification_limit_exceeded")));
         }
     }
 
     public void checkRegistrationLimit(Long planId) {
         PlanSummary plan = planQueriesService.findById(planId).orElseThrow(
-            () -> new TaopassNotFoundException(MessageHelper.getMessage("plan_not_found")));
+            () -> new NotFoundException(MessageHelper.getMessage("plan_not_found")));
         Long registrationCount = planQueriesService.countRegistrationByPlanId(plan.getId());
         if (registrationCount >= plan.getRegistrationLimit()) {
-            throw new TaopassForbiddenException(MessageHelper.getMessage("registration_limit_exceeded"));
+            throw new ForbiddenException(MessageHelper.getMessage("registration_limit_exceeded"));
         }
     }
 
     public boolean checkPlanValidation(String serviceType, Long locationId) {
         ServiceSummary service = serviceQueriesService.findSummaryServiceByType(serviceType).orElseThrow(
-            () -> new TaopassNotFoundException(MessageHelper.getMessage("service_not_found")));
+            () -> new NotFoundException(MessageHelper.getMessage("service_not_found")));
         Optional<PlanSummary> plan = planQueriesService.findPlanSummaryByServiceIdAndLocationId(
             service.getId(), locationId, TimeUtils.currentDate());
         return plan.isPresent();

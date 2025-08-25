@@ -7,14 +7,14 @@ import com.wiredpackage.oauth.api.dto.authentication.AuthScoringSettingDto;
 import com.wiredpackage.oauth.domain.aggregate_models.oauth2_waiting_approval.OAuth2WaitingApproval;
 import com.wiredpackage.oauth.domain.repositories.IOAuth2WaitingApprovalRepository;
 import com.wiredpackage.oauth.infrastructure.services.MessageService;
-import com.wiredpackage.shared.application.exceptions.TaopassNotFoundException;
+import com.wiredpackage.shared.application.exceptions.NotFoundException;
 import com.wiredpackage.shared.dto.AddWaitingApprovalMsg;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import static com.wiredpackage.shared.shared.constants.TaopassConstants.OAUTH_WAITING_APPROVAL_TOPIC;
+import static com.wiredpackage.shared.shared.constants.Constants.OAUTH_WAITING_APPROVAL_TOPIC;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -30,7 +30,7 @@ public class PerformSelfCancelApprovalCommandHandler implements Command.Handler<
         OAuth2WaitingApproval oAuth2WaitingApproval =
             oAuth2WaitingApprovalRepository.findByItemId(command.getWaitingApprovalItemId()).orElse(null);
         if (oAuth2WaitingApproval == null) {
-            throw new TaopassNotFoundException("waiting_approval_not_found");
+            throw new NotFoundException("waiting_approval_not_found");
         }
         oAuth2WaitingApproval.reject();
         oAuth2WaitingApprovalRepository.save(oAuth2WaitingApproval);

@@ -27,9 +27,9 @@ import com.wiredpackage.oauth.api.dto.authentication.AuthenticationGps;
 import com.wiredpackage.oauth.api.dto.authentication.AuthenticationSettingDto;
 import com.wiredpackage.shared.application.dto.authentication_obj.AuthenticationObjDetails;
 import com.wiredpackage.shared.application.dto.suite_customize_authentication.SuiteCustomizeAuthenticationDto;
-import com.wiredpackage.shared.application.exceptions.TaopassInnerServerErrorException;
-import com.wiredpackage.shared.application.exceptions.TaopassNotFoundException;
-import com.wiredpackage.shared.application.exceptions.TaopassUnauthorizationException;
+import com.wiredpackage.shared.application.exceptions.InnerServerErrorException;
+import com.wiredpackage.shared.application.exceptions.NotFoundException;
+import com.wiredpackage.shared.application.exceptions.UnauthorizationException;
 import com.wiredpackage.shared.dto.device_registrations.DeviceRegistrationStatus;
 import com.wiredpackage.shared.infrastructure.sevice_clients.accounts.AccountsServiceClient;
 import com.wiredpackage.shared.shared.constants.CameraType;
@@ -85,7 +85,7 @@ public class AuthenticationQueries {
     public AuthenticationConfigResDto getAuthenticationConfig(String clientId, Long locationId, String codeChallenge, String deviceIdentity) {
         OAuth2GrantSummary oAuth2Grant =
             oAuth2Queries.findOAuth2GrantSummaryServiceTypeByCodeChallenge(codeChallenge).orElseThrow(
-                () -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+                () -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         AuthenticationConfigResDto authenticationConfigResDto = new AuthenticationConfigResDto();
 
         AuthenticationSettingDto authenticationSettings = getCameraConfig(clientId, locationId);
@@ -97,7 +97,7 @@ public class AuthenticationQueries {
                 case ACCESS_LOG -> suiteRedirectUrlAccessLog;
                 case QR -> suiteRedirectUrlQr;
                 case TICKET -> suiteRedirectUrlTicket;
-                default -> throw new TaopassInnerServerErrorException(MessageHelper.getMessage("service_not_found"));
+                default -> throw new InnerServerErrorException(MessageHelper.getMessage("service_not_found"));
             };
 
             // Handle default authentication
@@ -113,7 +113,7 @@ public class AuthenticationQueries {
                 SuiteCustomizeAuthenticationDto suiteCustomizeAuthenticationDto =
                     accountsServiceClient.getCustomizeAuthentication(oAuth2Grant.getCustomizeAuthenticationId());
                 if (suiteCustomizeAuthenticationDto == null) {
-                    throw new TaopassNotFoundException(MessageHelper.getMessage("suite_customize_authentication_not_found"));
+                    throw new NotFoundException(MessageHelper.getMessage("suite_customize_authentication_not_found"));
                 }
                 applyAuthenticationDtoToResponse(suiteCustomizeAuthenticationDto, authenticationConfigResDto);
                 authenticationConfigResDto.setCustomizeAuthenticationId(oAuth2Grant.getCustomizeAuthenticationId());
@@ -130,14 +130,14 @@ public class AuthenticationQueries {
         }
 
         ServiceSummary service = serviceQueriesService.findSummaryServiceById(oAuth2Grant.getServiceId())
-            .orElseThrow(() -> new TaopassNotFoundException(MessageHelper.getMessage(
+            .orElseThrow(() -> new NotFoundException(MessageHelper.getMessage(
                 "service_not_found")));
         if (oAuth2Grant.getAuthenticationObjId() != null) {
-            if (service.getType().equals(ServiceType.TAOPASS_AUTH.name())) {
-                // Save authenticationObjId = scheduleId only for TAOPASS_AUTH
+            if (service.getType().equals(ServiceType.AUTH.name())) {
+                // Save authenticationObjId = scheduleId only for AUTH
                 Long scheduleId = oAuth2Grant.getAuthenticationObjId();
                 AuthScoringSettingDto authScoringSettings = getScheduleValues(Set.of(scheduleId));
-                authenticationConfigResDto.setAuthScoringSettingsForTaopassAuth(authScoringSettings);
+                authenticationConfigResDto.setAuthScoringSettingsForAuth(authScoringSettings);
                 return authenticationConfigResDto;
             }
             List<AuthenticationObjDetails> authenticationObjDetails = authenticationObjQueries.findAllItemsByObjId(
@@ -198,11 +198,11 @@ public class AuthenticationQueries {
             AuthenticationSettingSummary camera =
                 authenticationSettingQueriesService.findAuthenticationSettingSummaryByFieldAndValue(
                     AuthenticationFields.CLIENT_ID.name(), clientId).orElseThrow(
-                    () -> new TaopassNotFoundException(MessageHelper.getMessage("authentication_setting_not_found")));
+                    () -> new NotFoundException(MessageHelper.getMessage("authentication_setting_not_found")));
 
             PlanSummary plan = planQueriesService.findPlanSummaryByAuthenticationCameraIdAndLocationId(
                 camera.getId(), locationId, TimeUtils.currentDate()).orElseThrow(
-                () -> new TaopassNotFoundException(MessageHelper.getMessage("plan_not_found")));
+                () -> new NotFoundException(MessageHelper.getMessage("plan_not_found")));
 
             List<String> aiSettings =
                 authenticationSettingQueriesService.findAuthenticationAiSettingsByAuthenticationSettingId(
@@ -330,7 +330,7 @@ public class AuthenticationQueries {
             Schedule schedule = redisTemplateSchedule.opsForValue().get(scheduleCacheKey);
             if (schedule == null) {
                 schedule = scheduleQueries.getSchedulesByScheduleId(scheduleId)
-                    .orElseThrow(() -> new TaopassNotFoundException("Schedule not found"));
+                    .orElseThrow(() -> new NotFoundException("Schedule not found"));
                 schedule.setNeedToCache(true);
                 redisTemplateSchedule.opsForValue()
                     .set(scheduleCacheKey, schedule, authenticationService.getRedisCameraTimeout());
@@ -348,7 +348,7 @@ public class AuthenticationQueries {
         AuthScoring authScoring = redisTemplateAuthScoring.opsForValue().get(authScoringCacheKey);
         if (authScoring == null) {
             authScoring = authScoringQueries.getAuthScoringById(authScoringId).orElseThrow(
-                () -> new TaopassInnerServerErrorException(MessageHelper.getMessage("auth_scoring_not_found")));
+                () -> new InnerServerErrorException(MessageHelper.getMessage("auth_scoring_not_found")));
             redisTemplateAuthScoring.opsForValue()
                 .set(authScoringCacheKey, authScoring, authenticationService.getRedisCameraTimeout());
             log.info("----- Save new auth scoring cache by key {}", authScoringCacheKey);
@@ -360,7 +360,7 @@ public class AuthenticationQueries {
         //Find auth scoring
         OAuth2GrantSummary oAuth2Grant =
             oAuth2Queries.findOAuth2GrantSummaryByCodeChallenge(codeChallenge).orElseThrow(
-                () -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+                () -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         AuthenticationConfigResDto authenticationConfigResDto = new AuthenticationConfigResDto();
         AuthenticationSettingDto authenticationSettings = getCameraConfigStreamCamera(cameraId, locationId);
         authenticationConfigResDto.setAuthenticationSettings(authenticationSettings);
@@ -379,7 +379,7 @@ public class AuthenticationQueries {
                 SuiteCustomizeAuthenticationDto suiteCustomizeAuthenticationDto =
                     accountsServiceClient.getCustomizeAuthentication(oAuth2Grant.getCustomizeAuthenticationId());
                 if (suiteCustomizeAuthenticationDto == null) {
-                    throw new TaopassNotFoundException(MessageHelper.getMessage("suite_customize_authentication_not_found"));
+                    throw new NotFoundException(MessageHelper.getMessage("suite_customize_authentication_not_found"));
                 }
                 applyAuthenticationDtoToResponse(suiteCustomizeAuthenticationDto, authenticationConfigResDto);
                 authenticationConfigResDto.setCustomizeAuthenticationId(oAuth2Grant.getCustomizeAuthenticationId());
@@ -393,11 +393,11 @@ public class AuthenticationQueries {
         Long authenticationObjId = oAuth2Grant.getAuthenticationObjId();
         if (authenticationObjId == null) return authenticationConfigResDto;
         ServiceSummary service = serviceQueriesService.findSummaryServiceById(oAuth2Grant.getServiceId())
-            .orElseThrow(() -> new TaopassNotFoundException(MessageHelper.getMessage(
+            .orElseThrow(() -> new NotFoundException(MessageHelper.getMessage(
                 "service_not_found")));
         Map<String, List<AuthenticationObjDetails>> authenticationObjItems = getAuthenticationObjItemsByAuthObjId(authenticationObjId);
         AuthScoringSettingDto authScoringSettingDto;
-        if (service.equals(ServiceType.TAOPASS_AUTH.name())) {
+        if (service.equals(ServiceType.AUTH.name())) {
             authScoringSettingDto = getScheduleValues(Set.of(authenticationObjId));
         } else {
             authScoringSettingDto = getAuthScoringByAuthenticationObjItems(authenticationObjItems);
@@ -410,8 +410,8 @@ public class AuthenticationQueries {
         authenticationConfigResDto.setIsRegisteredDeviceValid(
             isRegisteredDeviceValid(authScoringSettingDto == null ? null :authScoringSettingDto.getId(), deviceIdentity)
         );
-        if (service.getType().equals(ServiceType.TAOPASS_AUTH.name())) {
-            authenticationConfigResDto.setAuthScoringSettingsForTaopassAuth(authScoringSettingDto);
+        if (service.getType().equals(ServiceType.AUTH.name())) {
+            authenticationConfigResDto.setAuthScoringSettingsForAuth(authScoringSettingDto);
         } else {
             authenticationConfigResDto.setAuthScoringSettings(authScoringSettingDto);
         }
@@ -424,11 +424,11 @@ public class AuthenticationQueries {
         if (authenticationSettings == null || ObjectUtils.isEmpty(authenticationSettings.getCameraName())) {
             AuthenticationSettingSummary authenticationSetting =
                 authenticationSettingQueriesService.findAuthenticationSettingSummaryById(cameraId).orElseThrow(
-                    () -> new TaopassNotFoundException(MessageHelper.getMessage("authentication_setting_not_found")));
+                    () -> new NotFoundException(MessageHelper.getMessage("authentication_setting_not_found")));
 
             PlanSummary plan = planQueriesService.findPlanSummaryByAuthenticationCameraIdAndLocationId(
                 cameraId, locationId, TimeUtils.currentDate()).orElseThrow(
-                () -> new TaopassNotFoundException(MessageHelper.getMessage("plan_not_found")));
+                () -> new NotFoundException(MessageHelper.getMessage("plan_not_found")));
 
             List<String> aiSettings =
                 authenticationSettingQueriesService.findAuthenticationAiSettingsByAuthenticationSettingId(
@@ -490,11 +490,11 @@ public class AuthenticationQueries {
     public AuthScoringSettingDto getAuthScoringByCodeChallenge(String codeChallenge) {
         OAuth2GrantSummary oAuth2Grant =
             oAuth2Queries.findOAuth2GrantSummaryByCodeChallenge(codeChallenge).orElseThrow(
-                () -> new TaopassUnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
+                () -> new UnauthorizationException(MessageHelper.getMessage("oauth2_grand_not_found")));
         Long authenticationObjId = oAuth2Grant.getAuthenticationObjId();
         if (authenticationObjId == null) return null;
         ServiceSummary service = serviceQueriesService.findSummaryServiceById(oAuth2Grant.getServiceId())
-            .orElseThrow(() -> new TaopassNotFoundException(MessageHelper.getMessage(
+            .orElseThrow(() -> new NotFoundException(MessageHelper.getMessage(
                 "service_not_found")));
         return getAuthScoringByAuthenticationObjId(authenticationObjId, service.getType());
     }
@@ -503,13 +503,13 @@ public class AuthenticationQueries {
         Long authenticationObjId = oAuth2Grant.getAuthenticationObjId();
         if (authenticationObjId == null) return null;
         ServiceSummary service = serviceQueriesService.findSummaryServiceById(oAuth2Grant.getServiceId())
-            .orElseThrow(() -> new TaopassNotFoundException(MessageHelper.getMessage(
+            .orElseThrow(() -> new NotFoundException(MessageHelper.getMessage(
                 "service_not_found")));
         return getAuthScoringByAuthenticationObjId(authenticationObjId, service.getType());
     }
 
     public AuthScoringSettingDto getAuthScoringByAuthenticationObjId(Long authenticationObjId, String service) {
-        if (service.equals(ServiceType.TAOPASS_AUTH.name())) {
+        if (service.equals(ServiceType.AUTH.name())) {
             return getScheduleValues(Set.of(authenticationObjId));
         }
         List<AuthenticationObjDetails> authenticationObjDetails = authenticationObjQueries.findAllItemsByObjId(authenticationObjId);

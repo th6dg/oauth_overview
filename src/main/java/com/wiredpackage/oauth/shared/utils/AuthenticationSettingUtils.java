@@ -3,7 +3,7 @@ package com.wiredpackage.oauth.shared.utils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
-import static com.wiredpackage.shared.shared.constants.TaopassConstants.CLIENT_ID_STREAM_CAMERA;
+import static com.wiredpackage.shared.shared.constants.Constants.CLIENT_ID_STREAM_CAMERA;
 
 public class AuthenticationSettingUtils {
 
